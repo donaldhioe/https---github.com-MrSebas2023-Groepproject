@@ -1,0 +1,235 @@
+<link rel="import" href="../../bower_components/polymer/polymer.html">
+<link rel="import" href="../../bower_components/paper-styles/typography.html">
+<link rel="import" href="../../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../../bower_components/paper-checkbox/paper-checkbox.html">
+<link rel="import" href="../../bower_components/paper-toast/paper-toast.html">
+<link rel="import" href="../../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../../bower_components/paper-input/paper-input.html">
+
+<!-- Dit element wordt door de aanwezigheid van de c_visible parameter steeds opnieuw gerefreshed
+     op het moment dat het element in de iron-pages geselecteerd wordt
+     en ook zodra hij weer gedeselecteerd wordt.
+     Deze techniek is bruikbaar om volatile info steeds opnieuw op te halen en niet enkel eenmalig
+     bij start van de applicatie
+-->
+
+<!--  externe afhankelijkheid:
+      standaarddatumstring_to_lokaledatumstring (zie <my-app>)
+-->
+
+<dom-module id="my-presentielijst">
+  <template>
+    <style is="custom-style">
+      :host {
+        display: block;
+      }
+
+      .title {
+        font-size: 20px;
+        color: blue;
+
+        padding-bottom: 2px;                    /* space above the border line */
+      }
+      .naam {
+        min-width: 100px;
+        text-align: left;
+      }
+      .presentie {
+        min-width: 100px;
+        text-align: left;
+      }
+      .les1 {
+        min-width: 150px;
+        text-align: left;
+      }
+
+      .les2 {
+        min-width: 150px;
+        text-align: left;
+      }
+      .top {
+        border-bottom: 1px solid red;           /* a red line */
+      }
+      .zoeken {
+        min-width: 100px;
+      }
+      .cursus {
+        text-align: center;
+        min-width: 500px;
+      }
+      .klas {
+        text-align: right;
+        min-width: 100px;
+      }
+      .my-button {
+        color: white;
+        background: #1a9fd9;
+      }
+      paper-checkbox.aanwezig {
+        --paper-checkbox-checked-color: var(--paper-green-500);
+      }
+      paper-checkbox:first-child {
+        --primary-color: #ff5722;
+      }
+
+
+    </style>
+
+    <table class="top">
+      <td class="zoeken">
+        <paper-input label="Student zoeken" value=""></paper-input>
+      </td>
+      <td class="cursus"><div class="title">Cursus "AUI"</div></td>
+      <td class="klas:">klas</td>
+    </table>
+
+
+    <table>
+      <tr>
+        <th class="naam">Naam</th>
+        <th class="les1">les 1</th>
+        <th class="les2">les 2</th>
+        <th class="presentie">present</th>
+      </tr>
+
+        <tr>
+          <td class="naam">Donald Hioe</td>
+          <td class="les1">
+            <div><paper-checkbox class="aanwezig">aw</paper-checkbox></div>
+            <div><paper-checkbox>z</paper-checkbox></div>
+            <div><paper-checkbox>af</paper-checkbox></div>
+          </td>
+          <td class="les2">
+            <div><paper-checkbox class="aanwezig">aw</paper-checkbox></div>
+            <div><paper-checkbox>z</paper-checkbox></div>
+            <div><paper-checkbox>af</paper-checkbox></div>
+          </td>
+          <td class="presentie">%</td>
+        </tr>
+        <template is "dom-repeat" items="[[_c_studenten]]">
+        <tr>
+          <td class="naam"><a href$="#/student/details/[[item.firstName]]-[[item.lastName]]">[[item.firstName]]</a></td>
+          <td class="les1">
+            <div><paper-checkbox class="aanwezig">aw</paper-checkbox></div>
+            <div><paper-checkbox>z</paper-checkbox></div>
+            <div><paper-checkbox>af</paper-checkbox></div>
+          </td>
+          <td class="les2">
+            <div><paper-checkbox class="aanwezig">aw</paper-checkbox></div>
+            <div><paper-checkbox>z</paper-checkbox></div>
+            <div><paper-checkbox>af</paper-checkbox></div>
+          </td>
+          <td class="presentie">%</td>
+        </tr>
+      </template>
+
+    </table>
+
+    <paper-button
+      class="my-button"
+      on-click="_medestudenten_opslaan_request_handler">Opslaan
+    </paper-button>
+
+    <iron-ajax
+      id="ajax_medestudenten_ophalen"
+      method="POST"
+      url="/student/medestudenten/ophalen"
+      handle-as="json"
+      on-response="_medestudenten_ophalen_response_handler">
+    </iron-ajax>
+
+    <iron-ajax
+      id="ajax_medestudenten_opslaan"
+      method="POST"
+      url="/student/medestudenten/opslaan"
+      handle-as="json"
+      on-response="_medestudenten_opslaan_response_handler">
+    </iron-ajax>
+
+
+
+
+  </template>
+
+
+
+  <script>
+
+      Polymer({
+        is: 'my-presentielijst',
+
+        properties: {
+          _c_studenten: {
+            type: Array,           /* array<student-info>: student-info = {id, firstName, lastName, sameGroup}
+										array is constant groepnr is changable */
+          },
+          c_rol: {
+            type: String,
+          },
+          c_username: {
+            type: String,
+          },
+          c_visible: {
+            type: Boolean,                                      /* true when element is the active visible item */
+            value: false,
+            observer: '_initializing',                          /* wordt ook aangeroepen bijwisseling van true naar false.
+                                                                   regel in de functie dat er niets gebeurd
+                                                                   als c_visible false is */
+          },
+        },
+
+        _go_home: function() {
+          var lApp = document.querySelector('my-app');  //het polymer element <my-app>
+          var lAppRouter = lApp.$.approuter;            // het html-element <app-route> met id=approuter
+          lAppRouter.data={page: ""};                   // vul het data attribute met de homepage url
+                                                        // door de two way binding in <app-route> en <app-location>
+                                                        // zal ook de url echt wijzigen
+        },
+
+        _initializing : function() {
+          if (this.c_visible) {                                 // zodra zichtbaar geworden moet er wat worden gedaan
+            if (this.c_rol=="docent") {                        // voor studenten
+              this._medestudenten_ophalen_request_handler();    //    haal info op van server
+            } else {                                            // na handmatige url wijziging zonder login
+              var lToast = this.$.toast_invalid_aanroep;        // meldt ongeldige aanroep
+              lToast.open();                                    /* het sluiten van deze error verwijst  */
+                                                                /* terug naar home page */
+            }
+          }
+        },
+
+        _medestudenten_ophalen_request_handler: function() {
+          console.log("_medestudenten_ophalen_request_handler user="+this.c_username);
+          this.$.ajax_medestudenten_ophalen.contentType="application/json";
+          this.$.ajax_medestudenten_ophalen.body={
+            "username":this.c_username
+          };
+          this.$.ajax_medestudenten_ophalen.generateRequest();
+        },
+
+        _medestudenten_ophalen_response_handler: function(request) {
+          console.log("_medestudenten_ophalen_response_handler aantal studenten="+request.detail.response.length);
+          this._c_studenten = request.detail.response;
+        },
+
+        _medestudenten_opslaan_request_handler: function() {
+          console.log("_medestudenten_opslaan_request_handler user="+this.c_username);
+          this.$.ajax_medestudenten_opslaan.contentType="application/json";
+          this.$.ajax_medestudenten_opslaan.body={
+              "username":this.c_username,
+              "groupMembers": this._c_studenten
+          };
+          this.$.ajax_medestudenten_opslaan.generateRequest();
+        },
+
+        _medestudenten_opslaan_response_handler: function(request) {
+          console.log("_mededestudenten_opslaan_response_handler errorcode="+request.detail.response.errorcode);
+          this._go_home();		/* verlaat de pagina en ga terug naar home page */
+        },
+
+
+      });
+
+  </script>
+</dom-module>
